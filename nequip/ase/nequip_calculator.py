@@ -106,7 +106,10 @@ class NequIPCalculator(Calculator):
         Calculator.calculate(self, atoms)
 
         # prepare data
-        data = AtomicData.from_ase(atoms=atoms, r_max=self.r_max)
+        if 's2u' in atoms.info:
+            data = AtomicData.from_ase(atoms=atoms, r_max=self.r_max,include_keys=['s2u'])
+        else:
+            data = AtomicData.from_ase(atoms=atoms, r_max=self.r_max)
         for k in AtomicDataDict.ALL_ENERGY_KEYS:
             if k in data:
                 del data[k]
