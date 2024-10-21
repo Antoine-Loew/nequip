@@ -1,7 +1,9 @@
 from nequip.nn import GraphModuleMixin, GradientOutput
 from nequip.nn import PartialForceOutput as PartialForceOutputModule
 from nequip.nn import StressOutput as StressOutputModule
+from nequip.nn import HessianEnergyOutput
 from nequip.data import AtomicDataDict
+from nequip.data import register_fields
 
 
 def ForceOutput(model: GraphModuleMixin) -> GradientOutput:
@@ -39,6 +41,25 @@ def PartialForceOutput(model: GraphModuleMixin) -> GradientOutput:
     ):
         raise ValueError("This model already has force outputs.")
     return PartialForceOutputModule(func=model)
+
+
+def ForceConstantOutput(model: GraphModuleMixin) -> GradientOutput:
+    r"""Add force constant to a model that predicts energy.
+
+    Args:
+        model: the energy model to wrap. Must have ``AtomicDataDict.TOTAL_ENERGY_KEY`` as an output.
+
+    Returns:
+        A ``GradientOutput`` wrapping ``model``.
+    """
+
+    if (
+        AtomicDataDict.FORCE_CONSTANT_KEY in model.irreps_out
+    ):
+        raise ValueError("This model already has force constant outputs.")
+    return HessianEnergyOutput(func=model)
+
+
 
 
 def StressForceOutput(model: GraphModuleMixin) -> GradientOutput:
