@@ -26,6 +26,9 @@ ATOMIC_NUMBERS_KEY: Final[str] = "atomic_numbers"
 # [n_atom, 1] long tensor
 ATOM_TYPE_KEY: Final[str] = "atom_types"
 
+# [n_batch, n_atom_unitcell] tensor of mapping supercell position to unitcell position
+S2U: Final[str] = "s2u"
+
 BASIC_STRUCTURE_KEYS: Final[List[str]] = [
     POSITIONS_KEY,
     EDGE_INDEX_KEY,
@@ -34,6 +37,7 @@ BASIC_STRUCTURE_KEYS: Final[List[str]] = [
     PBC_KEY,
     ATOM_TYPE_KEY,
     ATOMIC_NUMBERS_KEY,
+    S2U,
 ]
 
 # A [n_edge, 3] tensor of displacement vectors associated to edges
@@ -56,6 +60,8 @@ PARTIAL_FORCE_KEY: Final[str] = "partial_forces"
 STRESS_KEY: Final[str] = "stress"
 VIRIAL_KEY: Final[str] = "virial"
 
+FORCE_CONSTANT_KEY: Final[str] = 'force_constant'
+
 ALL_ENERGY_KEYS: Final[List[str]] = [
     PER_ATOM_ENERGY_KEY,
     TOTAL_ENERGY_KEY,
@@ -63,6 +69,7 @@ ALL_ENERGY_KEYS: Final[List[str]] = [
     PARTIAL_FORCE_KEY,
     STRESS_KEY,
     VIRIAL_KEY,
+    FORCE_CONSTANT_KEY,
 ]
 
 BATCH_KEY: Final[str] = "batch"
