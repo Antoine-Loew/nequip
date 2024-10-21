@@ -21,6 +21,7 @@ class GradientOutput(GraphModuleMixin, torch.nn.Module):
         out_field: the field in which to return the computed gradients. Defaults to ``f"d({of})/d({wrt})"`` for each field in ``wrt``.
         sign: either 1 or -1; the returned gradient is multiplied by this.
     """
+
     sign: float
     _negate: bool
     skip: bool
@@ -121,6 +122,7 @@ class PartialForceOutput(GraphModuleMixin, torch.nn.Module):
         vectorize: the vectorize option to ``torch.autograd.functional.jacobian``,
             false by default since it doesn't work well.
     """
+
     vectorize: bool
 
     def __init__(
@@ -185,6 +187,7 @@ class StressOutput(GraphModuleMixin, torch.nn.Module):
         func: the energy model to wrap
         do_forces: whether to compute forces as well
     """
+
     do_forces: bool
 
     def __init__(
@@ -337,7 +340,6 @@ class StressOutput(GraphModuleMixin, torch.nn.Module):
         return data
 
 
-
 @compile_mode("unsupported")
 class HessianEnergyOutput(GraphModuleMixin, torch.nn.Module):
     r"""Generate ForceConstant from an energy model.
@@ -372,34 +374,40 @@ class HessianEnergyOutput(GraphModuleMixin, torch.nn.Module):
         self.irreps_out[AtomicDataDict.FORCE_CONSTANT_KEY] = Irreps("2x1e")
         self.irreps_out[AtomicDataDict.FORCE_KEY] = Irreps("1o")
 
-
     def forward(self, data: AtomicDataDict.Type) -> AtomicDataDict.Type:
 
-
         ######################################
-        data=AtomicDataDict.with_batch(data)
+        data = AtomicDataDict.with_batch(data)
         pos = data[AtomicDataDict.POSITIONS_KEY]
         pos.requires_grad_(True)
-        out_data={}
-        out_data=self.func(data)
+        out_data = {}
+        out_data = self.func(data)
 
-        grad1=torch.autograd.grad(out_data[AtomicDataDict.TOTAL_ENERGY_KEY].sum(),
+        grad1 = torch.autograd.grad(
+            out_data[AtomicDataDict.TOTAL_ENERGY_KEY].sum(),
             pos,
             create_graph=True,  # needed to allow gradients of this output during training
             allow_unused=True,
             retain_graph=True,
-                                )[0]
-        forces=torch.neg(grad1)
-        out_data[AtomicDataDict.FORCE_KEY]=forces
-        grad2=torch.zeros((len(data['s2u']),grad1.size(1),grad1.size(0),grad1.size(1)),device=pos.device)
-        for i,nb in enumerate(data['s2u']):
+        )[0]
+        forces = torch.neg(grad1)
+        out_data[AtomicDataDict.FORCE_KEY] = forces
+        grad2 = torch.zeros(
+            (len(data["s2u"]), grad1.size(1), grad1.size(0), grad1.size(1)),
+            device=pos.device,
+        )
+        for i, nb in enumerate(data["s2u"]):
             for j in range(3):
-                grad2[i][j]=torch.autograd.grad(grad1[nb][j],pos,create_graph=True,retain_graph=True)[0]
+                grad2[i][j] = torch.autograd.grad(
+                    grad1[nb][j], pos, create_graph=True, retain_graph=True
+                )[0]
 
         batch = data[AtomicDataDict.BATCH_KEY]
-        
-        fc_reshape=torch.swapaxes(grad2,1,2)
-        fc_reshape=torch.reshape(fc_reshape,(fc_reshape.size()[0]*fc_reshape.size()[1],3,3))
-        
+
+        fc_reshape = torch.swapaxes(grad2, 1, 2)
+        fc_reshape = torch.reshape(
+            fc_reshape, (fc_reshape.size()[0] * fc_reshape.size()[1], 3, 3)
+        )
+
         out_data[AtomicDataDict.FORCE_CONSTANT_KEY] = fc_reshape
         return out_data
