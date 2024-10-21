@@ -55,7 +55,9 @@ class SimpleLoss:
                 return loss
         else:
             loss = self.func(pred[key], ref[key])
-            if mean:
+            if key == 'force_constant':
+                return loss.sum()
+            elif mean:
                 return loss.mean()
             else:
                 return loss
