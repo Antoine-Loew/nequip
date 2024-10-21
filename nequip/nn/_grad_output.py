@@ -91,7 +91,8 @@ class GradientOutput(GraphModuleMixin, torch.nn.Module):
             # This should work for any gradient of energy, but could act suspiciously and unexpectedly for arbitrary gradient outputs, if they ever come up
             [data[self.of].sum()],
             wrt_tensors,
-            create_graph=self.training,  # needed to allow gradients of this output during training
+            create_graph=True,  # needed to allow gradients of this output during training
+            retain_graph=True,
         )
         # return
         # grad is optional[tensor]?
@@ -334,3 +335,71 @@ class StressOutput(GraphModuleMixin, torch.nn.Module):
             pos.requires_grad_(False)
 
         return data
+
+
+
+@compile_mode("unsupported")
+class HessianEnergyOutput(GraphModuleMixin, torch.nn.Module):
+    r"""Generate ForceConstant from an energy model.
+
+    Args:
+        func: the energy model
+        vectorize: the vectorize option to ``torch.autograd.functional.hessian``,
+            false by default since it doesn't work well.
+    """
+
+    vectorize: bool
+
+    def __init__(
+        self,
+        func: GraphModuleMixin,
+        vectorize: bool = True,
+        vectorize_warnings: bool = False,
+    ):
+        super().__init__()
+        self.func = func
+        self.vectorize = vectorize
+        if vectorize_warnings:
+            # See https://pytorch.org/docs/stable/generated/torch.autograd.functional.hessian.html
+            torch._C._debug_only_display_vmap_fallback_warnings(True)
+
+        # check and init irreps
+        self._init_irreps(
+            irreps_in=self.func.irreps_in.copy(),
+            my_irreps_in={AtomicDataDict.TOTAL_ENERGY_KEY: Irreps("0e")},
+            irreps_out=self.func.irreps_out.copy(),
+        )
+        self.irreps_out[AtomicDataDict.FORCE_CONSTANT_KEY] = Irreps("2x1e")
+        self.irreps_out[AtomicDataDict.FORCE_KEY] = Irreps("1o")
+
+
+    def forward(self, data: AtomicDataDict.Type) -> AtomicDataDict.Type:
+
+
+        ######################################
+        data=AtomicDataDict.with_batch(data)
+        pos = data[AtomicDataDict.POSITIONS_KEY]
+        pos.requires_grad_(True)
+        out_data={}
+        out_data=self.func(data)
+
+        grad1=torch.autograd.grad(out_data[AtomicDataDict.TOTAL_ENERGY_KEY].sum(),
+            pos,
+            create_graph=True,  # needed to allow gradients of this output during training
+            allow_unused=True,
+            retain_graph=True,
+                                )[0]
+        forces=torch.neg(grad1)
+        out_data[AtomicDataDict.FORCE_KEY]=forces
+        grad2=torch.zeros((len(data['s2u']),grad1.size(1),grad1.size(0),grad1.size(1)),device=pos.device)
+        for i,nb in enumerate(data['s2u']):
+            for j in range(3):
+                grad2[i][j]=torch.autograd.grad(grad1[nb][j],pos,create_graph=True,retain_graph=True)[0]
+
+        batch = data[AtomicDataDict.BATCH_KEY]
+        
+        fc_reshape=torch.swapaxes(grad2,1,2)
+        fc_reshape=torch.reshape(fc_reshape,(fc_reshape.size()[0]*fc_reshape.size()[1],3,3))
+        
+        out_data[AtomicDataDict.FORCE_CONSTANT_KEY] = fc_reshape
+        return out_data
