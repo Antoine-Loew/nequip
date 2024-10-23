@@ -8,12 +8,12 @@ The models trained on LiBC and TiNbTa, as discussed in the article, can be found
 
 NequIP requires:
 
-* Python >= 3.7
+* Python >= 3.7, <=3.9.*
 * PyTorch >= 1.8, !=1.9, <=1.11.*. PyTorch can be installed following the [instructions from their documentation](https://pytorch.org/get-started/locally/). Note that neither `torchvision` nor `torchaudio`, included in the default install command, are needed for NequIP.
 
 To install:
 
-* We use [Weights&Biases](https://wandb.ai) to keep track of experiments. This is not a strict requirement — you can use our package without it — but it may make your life easier. If you want to use it, create an account [here](https://wandb.ai) and install the Python package:
+* [Weights&Biases](https://wandb.ai) can be used to keep track of experiments. This is not a strict requirement — you can use our package without it — but it may make your life easier. If you want to use it, create an account [here](https://wandb.ai) and install the Python package:
 
   ```
   pip install wandb
@@ -31,7 +31,20 @@ To install:
 
 ## Training phonon 
 
-\
+Using the newly implemented output layer called 'ForceConstantOutput', you can build a model that enables training on force constants. To do so, several conditions need to be met:
+
+- The input structures must be the supercells on which the phonon calculations were performed.
+
+- The s2u key from phonopy must be provided in the extxyz format, this determined the indices of unitcell's atoms inside the supercell .
+
+- The reduced force constants must be provided in the extxyz format in the same order as in Phonopy. They should be reshaped along the first dimension to obtain a shape of (n*N, 3, 3), where n is the number of atoms in the unit cell, N is the number of atoms in the supercell, and the last two indices correspond to the Cartesian coordinates.
+
+You can find two folders corresponding to the two structures in the examples/phonon_train/ directory. For example, to start training on TiNbTa, go inside the folder examples/phonon_train/TiNbTa and use:
+
+```
+nequip-train config_TiNbTa_base.yaml
+```
+
 
 
 
