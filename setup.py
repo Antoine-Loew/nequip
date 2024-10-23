@@ -26,7 +26,7 @@ setup(
         ]
     },
     install_requires=[
-        "numpy",
+        "numpy<2",
         "ase",
         "tqdm",
         "torch>=1.10.0,<1.13,!=1.9.0",
